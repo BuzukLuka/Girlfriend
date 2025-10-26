@@ -3,15 +3,15 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
-  useMemo,
   MouseEvent,
 } from "react";
 import emailjs from "@emailjs/browser";
 import dynamic from "next/dynamic";
 
-// client-only (random/viewport stuff)
+// Client-only decorative backgrounds to avoid hydration issues
 const EmojiBackground = dynamic(() => import("../app/components/EmojiBackground"), {
   ssr: false,
 });
@@ -20,6 +20,21 @@ const FloatingHearts = dynamic(() => import("../app/components/FloatingHearts"),
 });
 
 type FormState = { message: string };
+
+/* Clamp a position to container bounds given current button size */
+function clampPosition(
+  x: number,
+  y: number,
+  container: DOMRect,
+  btn: DOMRect,
+  pad = 6
+) {
+  const maxX = Math.max(0, container.width - btn.width - pad);
+  const maxY = Math.max(0, container.height - btn.height - pad);
+  const clampedX = Math.min(Math.max(x, pad), maxX);
+  const clampedY = Math.min(Math.max(y, pad), maxY);
+  return { x: clampedX, y: clampedY };
+}
 
 export default function Page() {
   const SERVICE_ID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!;
@@ -33,16 +48,16 @@ export default function Page() {
   const [sent, setSent] = useState<null | string>(null);
   const [err, setErr] = useState<null | string>(null);
 
-  // --- NO button logic ---
+  // NO button refs & state
   const gridRef = useRef<HTMLDivElement | null>(null);
   const noRef = useRef<HTMLButtonElement | null>(null);
 
-  // once you hover the NO button for the first time, we switch to "dodging" mode (absolute)
+  // Default: visible in its grid cell. After first tease, becomes absolute/dodging.
   const [dodging, setDodging] = useState(false);
   const [tease, setTease] = useState(false);
   const [noPos, setNoPos] = useState<{ x: number; y: number } | null>(null);
 
-  // place the NO button somewhere inside the grid
+  // Place the NO button somewhere inside bounds
   const moveNo = useCallback(() => {
     if (!gridRef.current || !noRef.current) return;
     const container = gridRef.current.getBoundingClientRect();
@@ -54,20 +69,22 @@ export default function Page() {
 
     const nextX = pad + Math.random() * maxX;
     const nextY = pad + Math.random() * maxY;
-    setNoPos({ x: nextX, y: nextY });
+
+    const { x, y } = clampPosition(nextX, nextY, container, btn, pad);
+    setNoPos({ x, y });
   }, []);
 
-  // tease a tiny bit, then move
+  // Tease for a moment, then enter dodging mode and move
   const teaseThenMove = useCallback(() => {
     setTease(true);
     setTimeout(() => {
-      setDodging(true); // from now on it’s absolute-positioned
+      setDodging(true);
       moveNo();
       setTease(false);
     }, 120);
   }, [moveNo]);
 
-  // move away when the mouse gets close (continuous dodging)
+  // Continuous dodge when cursor approaches within radius
   const onGridMouseMove = useCallback(
     (e: MouseEvent<HTMLDivElement>) => {
       if (!dodging || !gridRef.current || !noRef.current) return;
@@ -84,13 +101,12 @@ export default function Page() {
       const dy = mouseY - btnY;
       const dist = Math.hypot(dx, dy);
 
-      // if pointer is within 120px radius, jump somewhere else
       if (dist < 120) moveNo();
     },
     [dodging, moveNo]
   );
 
-  // also dodge on hover/click/touch of the NO button
+  // Enter dodging on hover/press/touch of NO
   useEffect(() => {
     const el = noRef.current;
     if (!el) return;
@@ -109,7 +125,7 @@ export default function Page() {
     };
   }, [teaseThenMove]);
 
-  // keep inside bounds on resize
+  // Keep inside on resize
   useEffect(() => {
     const onResize = () => {
       if (dodging) moveNo();
@@ -118,9 +134,29 @@ export default function Page() {
     return () => window.removeEventListener("resize", onResize);
   }, [dodging, moveNo]);
 
-  // style for NO button (static before dodging; absolute after)
+  // Re-clamp when the NO button's size changes (font-size/padding edits)
+  useEffect(() => {
+    if (!noRef.current) return;
+
+    const ro = new ResizeObserver(() => {
+      if (!gridRef.current || !noRef.current) return;
+      const container = gridRef.current.getBoundingClientRect();
+      const btn = noRef.current.getBoundingClientRect();
+
+      setNoPos((prev) => {
+        if (!prev) return prev; // still default grid cell
+        const { x, y } = clampPosition(prev.x, prev.y, container, btn, 6);
+        return { x, y };
+      });
+    });
+
+    ro.observe(noRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  // Style for NO: default grid position before dodging; absolute after
   const noStyle = useMemo(() => {
-    if (!dodging || !noPos) return {}; // default grid cell (visible on first load)
+    if (!dodging || !noPos) return {}; // default spot: visible in grid
     return {
       position: "absolute" as const,
       left: noPos.x,
@@ -131,7 +167,7 @@ export default function Page() {
     };
   }, [dodging, noPos]);
 
-  // --- YES button / Email ---
+  // YES -> send email
   async function yesClick() {
     setErr(null);
     setSent(null);
@@ -140,7 +176,6 @@ export default function Page() {
       if (!SERVICE_ID || !TEMPLATE_ID || !PUBLIC_KEY) {
         throw new Error("EmailJS env тохиргоо алга.");
       }
-
       await emailjs.send(
         SERVICE_ID,
         TEMPLATE_ID,
@@ -152,9 +187,8 @@ export default function Page() {
         },
         { publicKey: PUBLIC_KEY }
       );
-
       setSent("Зяаа! Илгээлээ. 💌");
-      setForm((p) => ({ ...p, message: "Илгээлээ! Чамд хайртай 💘" }));
+      setForm({ message: "Илгээлээ! Чамд хайртай 💘" });
     } catch (e: any) {
       setErr(e?.message || "Илгээх үед алдаа гарлаа.");
     } finally {
@@ -204,21 +238,21 @@ export default function Page() {
               {sending ? "Илгээж байна..." : "Тийм ээ 💞"}
             </button>
 
-            {/* NO button: visible at default place on first load, then dodges */}
+            {/* NO button: shows in default grid spot first; after first tease it dodges */}
             <button
               ref={noRef}
               type="button"
               className={`btn btn-no ${dodging ? "dodging" : ""} ${
                 tease ? "tease" : ""
-              }`}
+              } big`}
               style={noStyle as React.CSSProperties}
               onClick={(e) => {
                 e.preventDefault();
-                teaseThenMove(); // if click lands, dodge again
+                teaseThenMove();
               }}
               aria-label="NO"
             >
-              Үгүй, уучлаарай 💔
+              Үгүй 😅
             </button>
           </div>
 

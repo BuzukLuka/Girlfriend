@@ -29,7 +29,6 @@ export default function EmojiBackground() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // number of emojis depends on viewport size
   const count = Math.min(
     80,
     Math.max(24, Math.floor((viewport.w * viewport.h) / 35000))
