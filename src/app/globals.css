@@ -1,8 +1,21 @@
+/* Tailwind v4 */
 @import "tailwindcss";
 
+/* ===== CSS Variables & Theme ===== */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Accent palette for romantic gradient */
+  --rose-1: #ff9abf;
+  --rose-2: #ffd1dc;
+  --vio-1: #cdb4ff;
+  --sky-1: #a0c4ff;
+
+  /* Card/Glass settings */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --shadow-strong: 0 10px 40px rgba(0, 0, 0, 0.08);
 }
 
 @theme inline {
@@ -16,11 +29,277 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+
+    /* Slightly cooler dark palette */
+    --rose-1: #ff7aa6;
+    --rose-2: #2a1420;
+    --vio-1: #5c4d91;
+    --sky-1: #274a78;
+
+    --glass-bg: rgba(17, 17, 17, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --shadow-strong: 0 16px 44px rgba(0, 0, 0, 0.45);
   }
 }
 
+/* ===== Base ===== */
+html,
 body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system,
+    Segoe UI, Roboto, "Helvetica Neue", Arial;
+  text-rendering: optimizeLegibility;
+}
+
+/* Animated romantic background (under everything) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: radial-gradient(
+      1200px 800px at 20% 20%,
+      var(--rose-1),
+      transparent 60%
+    ),
+    radial-gradient(1000px 700px at 80% 30%, var(--vio-1), transparent 60%),
+    radial-gradient(1200px 900px at 50% 80%, var(--sky-1), transparent 60%),
+    linear-gradient(135deg, var(--rose-2), var(--background) 60%);
+  filter: saturate(1.1);
+}
+
+/* ===== Layout Helpers (used by the page) ===== */
+.container {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  margin: 0 auto;
+  width: 100%;
+  max-width: 680px;
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-radius: 24px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-strong);
+  overflow: hidden;
+}
+
+.header {
+  text-align: center;
+  padding: 28px 24px 0;
+}
+
+.title {
+  font-size: clamp(28px, 6vw, 44px);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.subtitle {
+  margin: 10px 0 0;
+  font-size: clamp(14px, 2.8vw, 18px);
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+}
+
+.content {
+  padding: 20px 24px 28px;
+}
+
+/* ===== Form Elements ===== */
+.row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 16px 0 6px;
+}
+@media (min-width: 520px) {
+  .row.two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.label {
+  font-size: 13px;
+  color: color-mix(in srgb, var(--foreground) 70%, transparent);
+  margin-bottom: 6px;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid #e7e7e7;
+  padding: 12px 14px;
+  font-size: 16px;
+  outline: none;
+  background: color-mix(in srgb, var(--background) 85%, white 15%);
+  color: var(--foreground);
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: #ff6fa3;
+  box-shadow: 0 0 0 4px rgba(255, 111, 163, 0.15);
+}
+
+.textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+/* ===== Buttons ===== */
+.container {
+  min-height: 100vh; /* works everywhere */
+  min-height: 100svh; /* better on mobile browsers */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.btngrid {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 18px;
+  min-height: 140px; /* gives room to dodge even on small screens */
+}
+
+.btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-weight: 700;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.2s ease,
+    border-color 0.2s ease;
+  will-change: transform;
+}
+
+.btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+/* YES: pink gradient */
+.btn-yes {
+  background: linear-gradient(180deg, #ff8fb3, #ff6fa3);
+  color: white;
+  box-shadow: 0 8px 22px rgba(255, 111, 163, 0.35);
+}
+.btn-yes:hover {
+  box-shadow: 0 10px 26px rgba(255, 111, 163, 0.45);
+}
+
+/* NO: ghost style; turns absolute when dodging (inline style in TSX) */
+.btn-no {
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid #e7e7e7;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+  touch-action: none;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn-no.tease,
+.btn-no:hover {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+}
+
+/* when dodging (absolute), animate position nicely */
+.btn-no.dodging {
+  transition: left 0.12s ease, top 0.12s ease, transform 0.12s ease,
+    background 0.15s ease, color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* ===== Toasts ===== */
+.toast {
+  margin-top: 14px;
+  background: #ecfeef;
+  border: 1px solid #bbf7d0;
+  color: #065f46;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.toast-error {
+  margin-top: 14px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #9f1239;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+/* ===== Decorative Layers ===== */
+.hearts {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.emoji-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.emoji {
+  position: absolute;
+  font-size: 20px;
+  opacity: 0.6;
+  animation: floatUp linear infinite;
+}
+
+/* Floating animation for emojis */
+@keyframes floatUp {
+  0% {
+    transform: translateY(80px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.55;
+  }
+  90% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: translateY(-120vh) translateX(0) rotate(15deg);
+    opacity: 0;
+  }
+}
+
+/* ===== Utility (optional) ===== */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
